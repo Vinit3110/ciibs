@@ -1,0 +1,19 @@
+# Ignore datasets
+data/
+
+# Ignore model outputs
+runs/
+weights/
+
+# Ignore system files
+__pycache__/
+*.pt
+*.pth
+*.log
+
+# Gradio cache
+.gradio/
+
+# OS junk
+.DS_Store
+Thumbs.db
