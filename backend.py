@@ -17,7 +17,7 @@ app.add_middleware(
 )
 
 # Load model safely
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "best.pt")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "weights", "best.pt")
 model = YOLO(MODEL_PATH)
 
 THREAT_CLASSES = ["gun", "knife", "blade", "bullet", "baton"]
@@ -28,6 +28,10 @@ def home():
 
 @app.post("/detect")
 async def detect(file: UploadFile):
+
+    if not file.content_type.startswith("image/"):
+        return {"error": "File must be an image"}
+
     image_bytes = await file.read()
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -87,7 +91,4 @@ async def detect(file: UploadFile):
         "risk_level": risk_level
     }
 
-import uvicorn
 
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=10000)
