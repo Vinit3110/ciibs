@@ -17,7 +17,7 @@ app.add_middleware(
 )
 
 # Load model safely
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "weights", "best.pt")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "best.pt")
 model = YOLO(MODEL_PATH)
 
 THREAT_CLASSES = ["gun", "knife", "blade", "bullet", "baton"]
