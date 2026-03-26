@@ -3,7 +3,7 @@ data/
 
 # Ignore model outputs
 runs/
-weights/
+
 
 # Ignore system files
 __pycache__/
