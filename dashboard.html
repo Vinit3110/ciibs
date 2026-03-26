@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CargoScan AI - Security Dashboard</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg-dark: #0f1117;
+            --panel-bg: #1a1d27;
+            --panel-hover: #262a37;
+            --accent: #4f8ef7;
+            --accent-hover: #3a7ce6;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border: #374151;
+
+            --risk-high: #ef4444;
+            /* Prohibited / Red */
+            --risk-med: #f59e0b;
+            /* Suspicious / Amber */
+            --risk-low: #22c55e;
+            /* Normal / Green */
+
+            --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- LAYOUT --- */
+        .panel {
+            background-color: var(--panel-bg);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        #left-panel {
+            width: 280px;
+            min-width: 280px;
+            border-right: 1px solid var(--border);
+            padding: 24px;
+        }
+
+        #center-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background-color: var(--bg-dark);
+            padding: 24px;
+        }
+
+        #right-panel {
+            width: 320px;
+            min-width: 320px;
+            border-left: 1px solid var(--border);
+            padding: 24px;
+        }
+
+        /* --- TYPOGRAPHY & ELEMENTS --- */
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-main);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.85rem;
+        }
+
+        button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            width: 100%;
+            font-family: inherit;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--accent-hover);
+        }
+
+        button:disabled {
+            background-color: var(--border);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+        }
+
+        .btn-outline:hover:not(:disabled) {
+            background-color: var(--panel-hover);
+        }
+
+        /* --- LEFT PANEL: UPLOAD & HISTORY --- */
+        #drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 32px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background-color 0.2s;
+            margin-bottom: 16px;
+            background-color: var(--bg-dark);
+        }
+
+        #drop-zone.drag-over {
+            border-color: var(--accent);
+            background-color: rgba(79, 142, 247, 0.05);
+        }
+
+        #drop-zone p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        #preview-img-thumbnail {
+            max-width: 100%;
+            max-height: 120px;
+            border-radius: 4px;
+            display: none;
+            margin: 0 auto 12px auto;
+        }
+
+        .history-list {
+            margin-top: 32px;
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background-color: var(--bg-dark);
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: background-color 0.2s;
+        }
+
+        .history-item:hover {
+            background-color: var(--panel-hover);
+        }
+
+        .history-thumbnail {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            object-fit: cover;
+            margin-right: 12px;
+            background-color: var(--panel-bg);
+        }
+
+        /* --- CENTER PANEL: VIEWPORT --- */
+        .viewport-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .toggle-group {
+            display: flex;
+            background-color: var(--panel-bg);
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .toggle-btn {
+            background: transparent;
+            color: var(--text-muted);
+            width: auto;
+            border-radius: 0;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+        }
+
+        .toggle-btn.active {
+            background-color: var(--panel-hover);
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .canvas-container {
+            flex: 1;
+            background-color: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            cursor: crosshair;
+        }
+
+        #heatmap-layer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.6;
+            pointer-events: none;
+            display: none;
+            mix-blend-mode: screen;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(15, 17, 23, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            backdrop-filter: blur(2px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(79, 142, 247, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* --- RIGHT PANEL: RESULTS --- */
+        .risk-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 0;
+            background-color: var(--bg-dark);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-bottom: 24px;
+        }
+
+        .gauge-wrapper {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin-bottom: 16px;
+        }
+
+        .gauge-svg {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+
+        .gauge-bg {
+            fill: none;
+            stroke: var(--panel-bg);
+            stroke-width: 8;
+        }
+
+        .gauge-progress {
+            fill: none;
+            stroke: var(--accent);
+            stroke-width: 8;
+            stroke-dasharray: 283;
+            /* 2 * pi * r (r=45) */
+            stroke-dashoffset: 283;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s ease-out, stroke 0.5s;
+        }
+
+        .gauge-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .reason-text {
+            padding: 16px;
+            background-color: var(--bg-dark);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .detections-table-container {
+            flex: 1;
+            overflow-y: auto;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        th {
+            background-color: var(--panel-hover);
+            color: var(--text-muted);
+            text-align: left;
+            padding: 12px;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-main);
+        }
+
+        tr {
+            transition: background-color 0.15s;
+            cursor: pointer;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover,
+        tr.highlighted {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 24px;
+            font-size: 0.9rem;
+        }
+
+        /* Utility classes for risk colors */
+        .color-high {
+            color: var(--risk-high);
+        }
+
+        .color-med {
+            color: var(--risk-med);
+        }
+
+        .color-low {
+            color: var(--risk-low);
+        }
+
+        .bg-high {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: var(--risk-high);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .bg-med {
+            background-color: rgba(245, 158, 11, 0.2);
+            color: var(--risk-med);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .bg-low {
+            background-color: rgba(34, 197, 94, 0.2);
+            color: var(--risk-low);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .stroke-high {
+            stroke: var(--risk-high);
+        }
+
+        .stroke-med {
+            stroke: var(--risk-med);
+        }
+
+        .stroke-low {
+            stroke: var(--risk-low);
+        }
+
+        .dot-high {
+            background-color: var(--risk-high);
+            box-shadow: 0 0 8px var(--risk-high);
+        }
+
+        .dot-med {
+            background-color: var(--risk-med);
+            box-shadow: 0 0 8px var(--risk-med);
+        }
+
+        .dot-low {
+            background-color: var(--risk-low);
+            box-shadow: 0 0 8px var(--risk-low);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- LEFT PANEL -->
+    <div id="left-panel" class="panel">
+        <h1>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" class="color-accent">
+                <path d="M2 12h4l2-9 5 18 3-10h6" />
+            </svg>
+            CargoScan AI
+        </h1>
+
+        <h2>Upload Scan</h2>
+        <div id="drop-zone">
+            <img id="preview-img-thumbnail" alt="Thumbnail Preview">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <p id="drop-text">Drag & drop cargo image<br>or click to browse</p>
+            <input type="file" id="file-input" accept="image/jpeg, image/png, image/webp">
+        </div>
+
+        <button id="analyze-btn" disabled>Analyze X-Ray</button>
+
+        <h2 style="margin-top: 40px;">Scan History</h2>
+        <ul id="history-list" class="history-list">
+            <!-- Populated by JS -->
+            <div class="empty-state">No scans yet</div>
+        </ul>
+    </div>
+
+    <!-- CENTER PANEL -->
+    <div id="center-panel">
+        <div class="viewport-header">
+            <h2>Inspection Viewport</h2>
+            <div style="display: flex; gap: 12px;">
+                <div class="toggle-group">
+                    <button id="toggle-boxes" class="toggle-btn active" onclick="toggleView('boxes')">Bounding
+                        Boxes</button>
+                    <button id="toggle-heatmap" class="toggle-btn" onclick="toggleView('heatmap')">Heatmap</button>
+                </div>
+                <button class="btn-outline" style="width: auto; padding: 8px 16px;" onclick="exportImage()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round"
+                        style="vertical-align: middle; margin-right: 4px;">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Export
+                </button>
+            </div>
+        </div>
+
+        <div class="canvas-container" id="canvas-container">
+            <canvas id="main-canvas"></canvas>
+            <img id="heatmap-layer" alt="Heatmap overlay">
+
+            <div id="loading-overlay" class="loading-overlay">
+                <div class="spinner"></div>
+                <p>Analyzing cargo density and structures...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div id="right-panel" class="panel">
+        <h2>Threat Assessment</h2>
+
+        <div class="risk-container">
+            <div class="gauge-wrapper">
+                <svg class="gauge-svg" viewBox="0 0 100 100">
+                    <circle class="gauge-bg" cx="50" cy="50" r="45"></circle>
+                    <circle class="gauge-progress" cx="50" cy="50" r="45" id="risk-gauge-circle"></circle>
+                </svg>
+                <div class="gauge-text" id="risk-score-text">--</div>
+            </div>
+            <div id="risk-badge" class="badge">Awaiting Scan</div>
+        </div>
+
+        <h2>Analysis Summary</h2>
+        <div class="reason-text" id="reason-text">
+            Upload an image and run the analysis to view intelligent threat detection summaries.
+        </div>
+
+        <h2>Detected Objects</h2>
+        <div class="detections-table-container">
+            <table id="detections-table">
+                <thead>
+                    <tr>
+                        <th>Object</th>
+                        <th>Conf</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="detections-body">
+                    <tr>
+                        <td colspan="3" class="empty-state">No objects detected</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // --- CONSTANTS & CONFIG ---
+        const API_URL = 'https://your-app.onrender.com/detect';
+        const MOCK_DELAY = 1500;
+
+        const RISK_RULES = {
+            high: ['gun', 'knife', 'blade', 'bullet', 'baton', 'dart', 'firearm'],
+            medium: ['wrench', 'pliers', 'screwdriver', 'hammer', 'scissors', 'lighter']
+        };
+
+        // UI Elements
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const previewThumb = document.getElementById('preview-img-thumbnail');
+        const dropText = document.getElementById('drop-text');
+
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvas-container');
+        const heatmapLayer = document.getElementById('heatmap-layer');
+        const loadingOverlay = document.getElementById('loading-overlay');
+
+        const riskGaugeCircle = document.getElementById('risk-gauge-circle');
+        const riskScoreText = document.getElementById('risk-score-text');
+        const riskBadge = document.getElementById('risk-badge');
+        const reasonText = document.getElementById('reason-text');
+        const detectionsBody = document.getElementById('detections-body');
+        const historyList = document.getElementById('history-list');
+
+        // State
+        let currentFile = null;
+        let currentImageObj = null;
+        let currentDetections = [];
+        let renderMode = 'boxes'; // boxes or heatmap
+        let hoveredDetectionIndex = -1;
+
+        // History State (last 5)
+        let scanHistory = [];
+
+        // Resize Canvas properly to fit container while keeping aspect ratio
+        function resizeCanvas() {
+            if (!currentImageObj) return;
+
+            const contW = container.clientWidth - 32; // padding
+            const contH = container.clientHeight - 32;
+            const imgW = currentImageObj.width;
+            const imgH = currentImageObj.height;
+
+            const scale = Math.min(contW / imgW, contH / imgH);
+            const displayW = imgW * scale;
+            const displayH = imgH * scale;
+
+            canvas.width = imgW;
+            canvas.height = imgH;
+
+            canvas.style.width = displayW + 'px';
+            canvas.style.height = displayH + 'px';
+
+            if (heatmapLayer.src) {
+                heatmapLayer.style.width = displayW + 'px';
+                heatmapLayer.style.height = displayH + 'px';
+            }
+
+            drawCanvas();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        // --- MOCK DATA GENERATORS ---
+        const mockResponses = [
+            {
+                // High Risk
+                detections: [
+                    { label: "gun", confidence: 0.94, bbox: [120, 150, 180, 140] },
+                    { label: "laptop", confidence: 0.88, bbox: [300, 200, 250, 180] }
+                ]
+            },
+            {
+                // Medium Risk
+                detections: [
+                    { label: "wrench", confidence: 0.76, bbox: [200, 100, 80, 200] },
+                    { label: "screwdriver", confidence: 0.82, bbox: [320, 120, 40, 150] },
+                    { label: "bottle", confidence: 0.91, bbox: [100, 300, 60, 120] }
+                ]
+            },
+            {
+                // Low Risk
+                detections: [
+                    { label: "book", confidence: 0.96, bbox: [150, 200, 120, 160] },
+                    { label: "clothes", confidence: 0.89, bbox: [50, 50, 400, 300] }
+                ]
+            }
+        ];
+
+        // --- UPLOAD LOGIC ---
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length) {
+                handleFileSelection(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleFileSelection(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelection(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please upload an image file.');
+                return;
+            }
+            currentFile = file;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewThumb.src = e.target.result;
+                previewThumb.style.display = 'block';
+                dropText.style.display = 'none';
+
+                // Set up main image rendering
+                const img = new Image();
+                img.onload = () => {
+                    currentImageObj = img;
+                    currentDetections = [];
+                    heatmapLayer.style.display = 'none';
+                    resizeCanvas();
+                    resetUI();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+
+            analyzeBtn.disabled = false;
+        }
+
+        function resetUI() {
+            riskScoreText.textContent = '--';
+            riskGaugeCircle.style.strokeDashoffset = 283;
+            riskGaugeCircle.className = 'gauge-progress';
+            riskBadge.className = 'badge';
+            riskBadge.textContent = 'Ready to Scan';
+            reasonText.textContent = 'Click Analyze X-Ray to begin processing.';
+            detectionsBody.innerHTML = '<tr><td colspan="3" class="empty-state">No objects detected</td></tr>';
+        }
+
+        // --- CLASSIFICATION LOGIC ---
+        function classifyCategory(label) {
+            const lbl = label.toLowerCase();
+            if (RISK_RULES.high.some(k => lbl.includes(k))) return 'high';
+            if (RISK_RULES.medium.some(k => lbl.includes(k))) return 'medium';
+            return 'low';
+        }
+
+        function processAnalysisResult(data) {
+            let detections = data.detections || [];
+
+            // Enrich detections with status based on rules
+            detections = detections.map(d => ({
+                ...d,
+                category: classifyCategory(d.label)
+            }));
+
+            currentDetections = detections;
+
+            // Calculate Risk
+            let riskScore = data.risk_score;
+            let riskLevel = data.risk_level;
+            let reason = data.reason;
+
+            if (!riskLevel) {
+                // Infer
+                let baseScore = 15;
+                let maxCat = 'low';
+                let counts = { high: 0, medium: 0, low: 0 };
+
+                detections.forEach(d => {
+                    counts[d.category]++;
+                    if (d.category === 'high') baseScore += 40 * d.confidence;
+                    if (d.category === 'medium') baseScore += 20 * d.confidence;
+                });
+
+                if (counts.high > 0) maxCat = 'high';
+                else if (counts.medium > 0) maxCat = 'medium';
+
+                riskScore = Math.min(Math.round(baseScore), 99);
+
+                if (maxCat === 'high') {
+                    riskLevel = 'High';
+                    reason = `Detected ${counts.high} prohibited item(s). Immediate manual inspection required.`;
+                } else if (maxCat === 'medium') {
+                    riskLevel = 'Medium';
+                    reason = `Detected ${counts.medium} suspicious item(s). Secondary review recommended.`;
+                } else {
+                    riskLevel = 'Low';
+                    reason = detections.length > 0 ? "Standard contents detected. No immediate threats found." : "No explicit objects detected. Pattern structure normal.";
+                }
+            }
+
+            // Heatmap
+            if (data.heatmap_base64) {
+                heatmapLayer.src = `data:image/jpeg;base64,${data.heatmap_base64}`;
+            } else {
+                heatmapLayer.src = '';
+            }
+
+            updateRightPanel(riskScore, riskLevel, reason, detections);
+            drawCanvas();
+            addToHistory(currentImageObj.src, riskLevel, riskScore);
+        }
+
+        function updateRightPanel(score, level, reason, detections) {
+            // Gauge Map: 0 is offset 283, 100 is offset 0
+            const offset = 283 - (score / 100) * 283;
+            riskGaugeCircle.style.strokeDashoffset = offset;
+
+            let colorCls = 'stroke-low';
+            let bgCls = 'bg-low';
+
+            const lvlLower = (level || "").toLowerCase();
+            if (lvlLower === 'high' || score > 75) { colorCls = 'stroke-high'; bgCls = 'bg-high'; }
+            else if (lvlLower === 'medium' || score > 40) { colorCls = 'stroke-med'; bgCls = 'bg-med'; }
+
+            riskGaugeCircle.className = `gauge-progress ${colorCls}`;
+            riskScoreText.textContent = score;
+
+            riskBadge.className = `badge ${bgCls}`;
+            riskBadge.textContent = level;
+
+            reasonText.textContent = reason;
+
+            // Table
+            if (detections.length === 0) {
+                detectionsBody.innerHTML = '<tr><td colspan="3" class="empty-state">Clear scan</td></tr>';
+            } else {
+                detectionsBody.innerHTML = '';
+                detections.forEach((d, i) => {
+                    const tr = document.createElement('tr');
+
+                    let dotClass = 'dot-low';
+                    let statusTxt = 'Normal';
+                    if (d.category === 'high') { dotClass = 'dot-high'; statusTxt = 'Prohibited'; }
+                    else if (d.category === 'medium') { dotClass = 'dot-med'; statusTxt = 'Suspicious'; }
+
+                    tr.innerHTML = `
+                        <td style="text-transform: capitalize;">${d.label}</td>
+                        <td>${(d.confidence * 100).toFixed(1)}%</td>
+                        <td><span class="status-dot ${dotClass}"></span>${statusTxt}</td>
+                    `;
+
+                    tr.addEventListener('mouseenter', () => { hoveredDetectionIndex = i; drawCanvas(); tr.classList.add('highlighted'); });
+                    tr.addEventListener('mouseleave', () => { hoveredDetectionIndex = -1; drawCanvas(); tr.classList.remove('highlighted'); });
+                    tr.addEventListener('click', () => { renderMode = 'boxes'; document.getElementById('toggle-boxes').classList.add('active'); document.getElementById('toggle-heatmap').classList.remove('active'); hoveredDetectionIndex = i; drawCanvas(); });
+
+                    detectionsBody.appendChild(tr);
+                });
+            }
+        }
+
+        // --- RENDERING ---
+        function toggleView(mode) {
+            if (mode === 'heatmap' && !heatmapLayer.src) return; // guard: no heatmap available
+            renderMode = mode;
+            document.getElementById('toggle-boxes').classList.toggle('active', mode === 'boxes');
+            document.getElementById('toggle-heatmap').classList.toggle('active', mode === 'heatmap');
+            drawCanvas();
+        }
+
+        function drawCanvas() {
+            if (!currentImageObj) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(currentImageObj, 0, 0, canvas.width, canvas.height);
+
+            if (renderMode === 'heatmap' && heatmapLayer.src) {
+                heatmapLayer.style.display = 'block';
+                return; // Hide boxes in pure heatmap mode (or could overlay)
+            } else {
+                heatmapLayer.style.display = 'none';
+            }
+
+            // Draw bounding boxes
+            if (renderMode === 'boxes' && currentDetections) {
+                currentDetections.forEach((det, i) => {
+                    const [x, y, w, h] = det.bbox;
+                    const isHovered = (i === hoveredDetectionIndex);
+
+                    // Colors
+                    let strokeColor = '#22c55e'; // low
+                    if (det.category === 'high') strokeColor = '#ef4444';
+                    else if (det.category === 'medium') strokeColor = '#f59e0b';
+
+                    ctx.lineWidth = isHovered ? 6 : 3;
+                    ctx.strokeStyle = strokeColor;
+                    ctx.strokeRect(x, y, w, h);
+
+                    // Fill if hovered
+                    if (isHovered) {
+                        ctx.fillStyle = strokeColor + '40'; // 25% opacity
+                        ctx.fillRect(x, y, w, h);
+                    }
+
+                    // Label
+                    const labelText = `${det.label} ${(det.confidence * 100).toFixed(0)}%`;
+                    ctx.font = `bold ${isHovered ? 24 : 18}px Inter`;
+                    const textWidth = ctx.measureText(labelText).width;
+
+                    ctx.fillStyle = strokeColor;
+                    const textY = Math.max(0, y - (isHovered ? 30 : 25));
+                    ctx.fillRect(x, textY, textWidth + 10, isHovered ? 30 : 25);
+
+                    ctx.fillStyle = '#1a1d27'; // Dark text on bright bg
+                    ctx.fillText(labelText, x + 5, textY + (isHovered ? 22 : 18));
+                });
+            }
+        }
+
+        // Interaction: hover on canvas
+        canvas.addEventListener('mousemove', (e) => {
+            if (renderMode !== 'boxes' || !currentDetections.length) return;
+
+            const rect = canvas.getBoundingClientRect();
+            // Map mouse coord to canvas intrinsic size
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            const mx = (e.clientX - rect.left) * scaleX;
+            const my = (e.clientY - rect.top) * scaleY;
+
+            let foundIndex = -1;
+            for (let i = 0; i < currentDetections.length; i++) {
+                const [x, y, w, h] = currentDetections[i].bbox;
+                if (mx >= x && mx <= x + w && my >= y && my <= y + h) {
+                    foundIndex = i;
+                    break;
+                }
+            }
+
+            if (foundIndex !== hoveredDetectionIndex) {
+                hoveredDetectionIndex = foundIndex;
+                drawCanvas();
+
+                // Highlight table row
+                Array.from(detectionsBody.children).forEach((tr, i) => {
+                    tr.classList.toggle('highlighted', i === hoveredDetectionIndex);
+                    if (i === hoveredDetectionIndex) tr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                });
+            }
+        });
+
+        // --- API INTEGRATION ---
+        analyzeBtn.addEventListener('click', async () => {
+            if (!currentFile) return;
+
+            loadingOverlay.classList.add('active');
+            analyzeBtn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('file', currentFile);
+
+            try {
+                // Try real API
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: formData,
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                if (!response.ok) throw new Error('API Server error');
+
+                const data = await response.json();
+
+                // Check if API returns string representation format (as seen in existing backend.py)
+                // If it's a string from FastAPI containing raw results, it might fail our struct, so fallback to mock
+                if (typeof data.detections === 'string') {
+                    console.warn("Detected raw string from backend instead of JSON structure. Falling back to structured mock data for UI demo.");
+                    throw new Error("Invalid format from backend");
+                }
+
+                processAnalysisResult(data);
+                loadingOverlay.classList.remove('active');
+                analyzeBtn.disabled = false;
+
+            } catch (err) {
+                console.error("API Error or Missing fields, using mock data.", err);
+
+                // Simulate network delay
+                setTimeout(() => {
+                    // Randomly select a mock scenario based on filename to provide consistent experience or randomize
+                    // For logic, we'll pick High or Medium Risk mostly, as requested
+                    const mockIdx = Math.floor(Math.random() * 2); // 0 or 1 (High or Med)
+                    const mockData = JSON.parse(JSON.stringify(mockResponses[mockIdx])); // deep copy
+
+                    // Adjust bounding boxes to fit image proportionally roughly
+                    const imgW = currentImageObj.width;
+                    const imgH = currentImageObj.height;
+                    mockData.detections.forEach(d => {
+                        // Ensure they fit within the uploaded image
+                        d.bbox[0] = Math.min(d.bbox[0], imgW * 0.5);
+                        d.bbox[1] = Math.min(d.bbox[1], imgH * 0.5);
+                        d.bbox[2] = Math.min(d.bbox[2], imgW * 0.4);
+                        d.bbox[3] = Math.min(d.bbox[3], imgH * 0.4);
+                    });
+
+                    processAnalysisResult(mockData);
+                    loadingOverlay.classList.remove('active');
+                    analyzeBtn.disabled = false;
+                }, MOCK_DELAY);
+            }
+        });
+
+        // --- HISTORY ---
+        function addToHistory(imgSrc, level, score) {
+            scanHistory.unshift({
+                imgSrc, level, score,
+                id: Math.floor(Math.random() * 10000), // generate once, stable across re-renders
+                date: new Date().toLocaleTimeString()
+            });
+            if (scanHistory.length > 5) scanHistory.pop();
+            renderHistory();
+        }
+
+        function renderHistory() {
+            if (scanHistory.length === 0) return;
+
+            historyList.innerHTML = '';
+            scanHistory.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'history-item';
+
+                let dotClass = 'dot-low';
+                if ((item.level || "").toLowerCase() === 'high') dotClass = 'dot-high';
+                else if ((item.level || "").toLowerCase() === 'medium') dotClass = 'dot-med';
+
+                li.innerHTML = `
+                    <img src="${item.imgSrc}" class="history-thumbnail" alt="Thumb">
+                    <div style="flex: 1;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <strong>Scan #${item.id}</strong>
+                            <span style="color:var(--text-muted); font-size: 0.8rem;">${item.date}</span>
+                        </div>
+                        <div style="display:flex; align-items:center; margin-top:4px;">
+                            <span class="status-dot ${dotClass}" style="width:6px; height:6px;"></span>
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">Score: ${item.score} / ${item.level}</span>
+                        </div>
+                    </div>
+                `;
+                historyList.appendChild(li);
+            });
+        }
+
+        // --- EXPORT ---
+        function exportImage() {
+            if (!currentImageObj) return;
+            const lnk = document.createElement('a');
+            lnk.download = `cargoscan_annotated_${Date.now()}.png`;
+            lnk.href = canvas.toDataURL('image/png', 0.9);
+            lnk.click();
+        }
+
+        // Load dummy empty state
+        renderHistory();
+
+    </script>
+</body>
+
+</html>
