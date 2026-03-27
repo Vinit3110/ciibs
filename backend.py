@@ -5,6 +5,7 @@ import numpy as np
 import os
 
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 app = FastAPI()
 
@@ -22,9 +23,13 @@ model = YOLO(MODEL_PATH)
 
 THREAT_CLASSES = ["gun", "knife", "blade", "bullet", "baton"]
 
+from fastapi.staticfiles import StaticFiles
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 @app.get("/")
-def home():
-    return {"message": "CargoScan AI Backend Running"}
+def serve_frontend():
+    return FileResponse("static/index.html")
 
 @app.post("/detect")
 async def detect(file: UploadFile):
@@ -86,9 +91,10 @@ async def detect(file: UploadFile):
         risk_level = "Low"
 
     return {
-        "detections": detections,
-        "risk_score": risk_score,
-        "risk_level": risk_level
+    "detections": detections,
+    "risk_score": risk_score,
+    "risk_level": risk_level,
+    "reason": f"{risk_level} risk due to detected objects"
     }
 
 
